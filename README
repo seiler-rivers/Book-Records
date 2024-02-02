@@ -1,0 +1,109 @@
+1) THE GOAL:
+    The purpose of this project is to create a program that handles the inventory for a small book company using keyword sequential records.
+    The program stores data for book records in a master file, reads in transaction files to update records, and stores the updated records in a new master file.
+ 
+2) OUTPUT AND INPUT SPECIFICATION:
+
+    I. create.cpp
+        This program translates a text file of books into a binary file of books.
+        input: library.dat
+        output: library.out
+
+        a) library.dat
+            This is a text file that is input into create.cpp. 
+            It stores information about each book record formatted by seperation with '|'.
+        b) library.out
+            This is a binary file that is output from create.cpp. 
+            it stores the information from library.dat, minus errors that may have been entered
+            
+    II. update.cpp
+        This program takes a master binary file of books, reads a transaction binary file, performs the transactions, and outputs an updated master binary file
+        and an error text file.
+
+        TO RUN:
+            ./a.out library.out transact.out update.out
+            where library.out is the master binary file, transact.out is the transaction file, and update.out is the updated master file
+
+        a) library.out
+            This is a binary file that was created by running create.cpp. 
+            It stores information about each book in binary
+            this file is copied and removed in this program ("copy.out") to prevent modifying the original
+        b)  transact.out
+            This is a binary file that stores transactions to be performed.
+            Each line contains a TransactionRec struct that contains details of what to do with certain books (add, delete, change price, change onhand)
+        c) update.out
+            This is a binary file that stores the final book records after the transactions have been completed
+            its contents are printed out to the screen upon completion of the program.
+        d) ERRORS
+            This is a text file that details any errors that occurred when reading from the transact.out file. 
+            It details the error type and what line in the file it occurred on.
+            The errors are also printed to the screen during the program.
+
+3) ALGORITHM DESIGN:
+    
+    Structs:
+        1) BookRec: stores attributes of a book record
+        2) TransactionType: stores an enum transaction type and BookRecord to be applied to
+
+    I. create.cpp
+        The purpose of this program is to create a binary file of BookRec structs from a text file.
+        two file pointers were created:
+            one to read IN from library.dat
+            one to write OUT to BINARY to library.out
+        library.dat is read in one line at a time, storing each element seperated by a '|' into a BookRec struct.
+
+        Error handling in this program includes:
+            if a record is out of order, print an error but still write to library.out
+            if a record has a negative price, print error and ignore record
+            if a record has a negative amount on hand, print error and ignore record
+        
+        Next, the BookRecs from library.dat are written out to library.out.
+        The book records are also printed to the screen in a readable fashion.
+
+    II. update.cpp
+        The purpose of this program is to update the master library.out file with new transactions.
+
+        a) createMap()
+            This method reads IN from the binary library.out file and stores each record into a map.
+            it also checks if the master file can be opened and is not empty
+            Thee program reads library.out line by line with a while loop, inputting each line (each bookRec) into a map. 
+            The map key is the book's isbn, and the object is the byte offset in library.out where the book record is stored.
+        
+        b) transaction()
+            This method reads performs transactions to update the master file.
+            a copy of the master library.out file is made and called "coppy.out", this is deleted at the end of the method to not edit the master file.
+
+            the transaction file is read into a tRec struct object one line at a time.
+            The program switched through courses depening on the toDo element of the struct for each transaction
+
+            1) if 0, add an element.
+                check if record is already stored in map. if not, move copy pointer to end and write out that element from the transaction file to the copy file.
+                if record is in the map already, print an error message
+                write that message out to the ERRORS file
+            2) if 1, delete an element.
+                check if record is already stored in map. If so, erase the record from the map.
+                if not, print error message and write message to ERRORS
+            3) if 2, change the onhand amount.
+                if record exists in map, perform these steps:
+                    get byte offset of record in copyfile
+                    move to that offset in copyfile
+                    get the onhand value in the bookRec, add the tRec onhand value
+                    move to byte offset in copy file, 
+                    write out new onhand number
+                if a record becomes negative, print error and change to 0 and write to ERRORS
+                if not found, print error and write out error to ERRORS
+            4) if 3, hange the price of book
+                if record exists,
+                move to byte offset where bookj is in copyfile
+                read the book at byte offset and change price
+                move back to original byte offset and write the record back out to copyfile
+                if not found, print error and write to ERRORS
+            
+        c) writeOut()
+            write sorted map to update.out
+            itterate through map (will be sorted by isbn!) 
+                for each record in map, go to byte offset in copyfile
+                write that record to update.out
+
+        d)  printUpdates()
+            This method formates the information from update.out and prints final file to screen.
